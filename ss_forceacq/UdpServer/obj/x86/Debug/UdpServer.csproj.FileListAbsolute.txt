@@ -100,3 +100,10 @@ D:\Luoqi\Code\local_ss_project\ss_forceacq\UdpServer\bin\Debug\UdpServer.pdb
 D:\Luoqi\Code\local_ss_project\ss_forceacq\UdpServer\bin\Debug\MccDaq.dll
 D:\Luoqi\Code\local_ss_project\ss_forceacq\UdpServer\bin\Debug\MccDaq.xml
 D:\Luoqi\Code\local_ss_project\ss_forceacq\UdpServer\obj\x86\Debug\UdpServer.csprojResolveAssemblyReference.cache
+D:\Luoqi\Code\local_ssproject\ss_forceacq\UdpServer\obj\x86\Debug\UdpServer.exe
+D:\Luoqi\Code\local_ssproject\ss_forceacq\UdpServer\obj\x86\Debug\UdpServer.pdb
+D:\Luoqi\Code\local_ssproject\ss_forceacq\UdpServer\bin\Debug\UdpServer.exe
+D:\Luoqi\Code\local_ssproject\ss_forceacq\UdpServer\bin\Debug\UdpServer.pdb
+D:\Luoqi\Code\local_ssproject\ss_forceacq\UdpServer\bin\Debug\MccDaq.dll
+D:\Luoqi\Code\local_ssproject\ss_forceacq\UdpServer\bin\Debug\MccDaq.xml
+D:\Luoqi\Code\local_ssproject\ss_forceacq\UdpServer\obj\x86\Debug\UdpServer.csprojResolveAssemblyReference.cache

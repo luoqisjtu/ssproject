@@ -23,7 +23,6 @@ namespace UDP
     {
 
         static MccDaq.MccBoard DaqBoard = new MccDaq.MccBoard(0);
-        static MccDaq.MccBoard DaqBoard1 = new MccDaq.MccBoard(1);
 
         private int str_temp;
         private static MccDaq.Range Range;        //定义A/D和D/A转换范围

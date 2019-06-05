@@ -51,10 +51,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\csvhelper.cs" />
+     <Compile Include="Assets\AllList.cs" />
      <Compile Include="Assets\GlobalVariables.cs" />
      <Compile Include="Assets\MoveRacket.cs" />
+     <Compile Include="Assets\SaveCSV.cs" />
      <Compile Include="Assets\TargetRacket.cs" />
+     <None Include="Assets\Resources\config.txt" />
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
  </Reference>

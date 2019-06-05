@@ -8,6 +8,8 @@ using System.Net;
 using System.Net.Sockets;
 
 using System.IO;
+//using System.Data;
+
 
 
 public class MoveRacket : MonoBehaviour
@@ -25,17 +27,27 @@ public class MoveRacket : MonoBehaviour
     int recv;
 
 
-    static readonly object lockObject = new object();
-    string returnData = "";
-    bool precessData = false;
-
-
     public GameObject obj;
     public Renderer rend;
 
+	public float IDrecord;
+	public bool collisionrecord;
+	public int levelcount;
+	AllList[] Levels;
 
-    List<float> listToHoldData;
-    List<float> listToHoldTime;
+
+   // List<float> listToHoldData;
+    //List<float> listToHoldTime;
+
+	void CreateList(int n)
+	{
+		for (int i = 0; i < n; i++)
+		{
+			Levels[i] = new AllList();
+		}
+	}
+
+
 
     void Start()
     {
@@ -43,7 +55,7 @@ public class MoveRacket : MonoBehaviour
         IPEndPoint ip = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 8001);
 
 
-        string welcome = "K";
+        string welcome = "H";
         data = Encoding.ASCII.GetBytes(welcome);  //数据类型转换
         server.SendTo(data, data.Length, SocketFlags.None, ip);  //发送给指定服务端
 
@@ -51,13 +63,15 @@ public class MoveRacket : MonoBehaviour
         recv = server.ReceiveFrom(data, ref Remote);//获取客户端，获取客户端数据，用引用给客户端赋值 
         data = new byte[1024];
 
-        listToHoldData = new List<float>();
-        listToHoldTime = new List<float>();
+        //listToHoldData = new List<float>();
+        //listToHoldTime = new List<float>();
 
 
+		levelcount = TargetRacket.levelnumber;  
+		//Debug.Log("f"+ levelcount); 
 
-        //thread = new Thread(new ThreadStart(ThreadMethod));
-        //thread.Start();
+		Levels = new AllList[levelcount];
+		CreateList(levelcount);
 
         obj = GameObject.Find("MoveRacket");
         //rend = obj.GetComponent<Renderer>();
@@ -75,64 +89,59 @@ public class MoveRacket : MonoBehaviour
 
         float barForceInMilliNewton = (float)Convert.ToInt32(stringData);
         float v = Input.GetAxisRaw("Vertical");
-        float barHeight = 0.03f * barForceInMilliNewton - 0.1f;
+        float barHeight = (0.03f * barForceInMilliNewton - 0.1f)/3;
         GetComponent<Rigidbody2D>().position = new Vector2(0, barHeight);
         //obj.transform.position = new Vector2(0, barHeight);
 
+		IDrecord = TargetRacket.ID;
+		collisionrecord = TargetRacket.collision;
 
-        listToHoldData.Add(barForceInMilliNewton);
+        //listToHoldData.Add(barForceInMilliNewton);
         //float t = Time.time;
-        listToHoldTime.Add(Time.time);
+       // listToHoldTime.Add(Time.time);
         //Vector2 mousePosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
         //GetComponent<Rigidbody2D>().position = new Vector2(0, mousePosition.y);
 
+		Levels[(int)IDrecord].allList(IDrecord, Time.time, barHeight, collisionrecord, barForceInMilliNewton);
 
     }
+		
+
 
     private void OnApplicationQuit()
     {
 
+		for (int n = 0; n < levelcount; n++)
+		{
+			SaveCSV.savedata("Task" + n.ToString()+ ".csv", Levels[n].listToHoldTime, Levels[n].listToHoldData, Levels[n].listToHoldID, Levels[n].listToHoldBarHeight, Levels[n].listToHoldcollision);
+
+		}
+
+
 
         //string data = "";
-        //StreamWriter writer = new StreamWriter("test.csv", false, Encoding.UTF8);
+       // StreamWriter writer = new StreamWriter("test.csv", false, Encoding.UTF8);
+        //writer.WriteLine(string.Format("{0},{1}", "Time", "Pressure"));
 
-        //foreach (float eachBarHeight in listToHoldData)
+        //using (var e1 = listToHoldTime.GetEnumerator())
+        //using (var e2 = listToHoldData.GetEnumerator())
         //{
-        //    data += eachBarHeight.ToString();
-        //    data += "\n";
+           // while (e1.MoveNext() && e2.MoveNext())
+            //{
+               // var item1 = e1.Current;
+               // var item2 = e2.Current;
+
+                //data += item1.ToString();
+                //data += ",";
+               // data += item2.ToString();
+               // data += "\n";
+                // use item1 and item2
+           // }
         //}
 
-        //writer.Write(data);
 
-        //writer.Close();
-
-
-        string data = "";
-        StreamWriter writer = new StreamWriter("test.csv", false, Encoding.UTF8);
-                  
-        writer.WriteLine(string.Format("{0},{1}", "Time", "Pressure"));
-
-        
-        using (var e1 = listToHoldTime.GetEnumerator())
-        using (var e2 = listToHoldData.GetEnumerator())
-        {
-            while (e1.MoveNext() && e2.MoveNext())
-            {
-                var item1 = e1.Current;
-                var item2 = e2.Current;
-
-                data += item1.ToString();
-                data += ",";
-                data += item2.ToString();
-                data += "\n";
-                // use item1 and item2
-            }
-        }
-
-
-        writer.Write(data);
-
-        writer.Close();
+       // writer.Write(data);
+       // writer.Close();
     }
 
 }

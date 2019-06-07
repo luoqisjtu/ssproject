@@ -12,7 +12,7 @@ public class SaveCSV : MonoBehaviour {
     public static void createfile() {
         //  string filename;
 
-		string path = @"D:\Luoqi\Code\local_nersa\Fitts_law_force_data";
+		string path = @"D:\Luoqi\Code\local_ssproject\Fitts_law_force_data";
         //获取当前系统的时间命名文件夹
         DateTime dt = DateTime.Now;
        
@@ -29,7 +29,7 @@ public class SaveCSV : MonoBehaviour {
 
         string data = "";
  
-		FileStream fs = new FileStream(@"D:\Luoqi\Code\local_nersa\Fitts_law_force_data\" + filename +"\\"+ CSVname, FileMode.Create, FileAccess.Write);//创建写入文件 
+		FileStream fs = new FileStream(@"D:\Luoqi\Code\local_ssproject\Fitts_law_force_data\" + filename +"\\"+ CSVname, FileMode.Create, FileAccess.Write);//创建写入文件 
  
         StreamWriter writer = new StreamWriter(fs);
       //  StreamWriter writer = new StreamWriter(CSVname, false);//。如果此值为false，则创建一个新文件，如果存在原文件，则覆盖。如果此值为true，则打开文件保留原来数据，如果找不到文件，则创建新文件。

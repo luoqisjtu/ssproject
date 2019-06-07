@@ -12,7 +12,7 @@ public class SaveCSV_f : MonoBehaviour {
     public static void createfile() {
         //  string filename;
 
-		string path = @"D:\Luoqi\Code\local_nersa\Fitts_law_emg_data";
+		string path = @"D:\Luoqi\Code\local_ssproject\Fitts_law_emg_data";
         //获取当前系统的时间命名文件夹
         DateTime dt = DateTime.Now;
        
@@ -24,20 +24,20 @@ public class SaveCSV_f : MonoBehaviour {
 
     }
     // 将保存数据的代码进行封装
-	public static void savedata(string CSVname, List<float> listToHoldTime, List<float> listToHoldID, List<float> listToHoldinit_data, List<float> listToHoldaveragefilter, List<float> listToHoldbutterworthfilter, List<float> listToHoldbayesfilter, List<float> listToHoldemg_send)  
+	public static void savedata(string CSVname, List<float> listToHoldTime, List<float> listToHoldID, List<float> listToHoldrawEmg, List<float> listToHoldaveragefilter, List<float> listToHoldbutterworthfilter, List<float> listToHoldbayesfilter, List<float> listToHoldemg_send)  
     {
 
         string data = "";
  
-		FileStream fs = new FileStream(@"D:\Luoqi\Code\local_nersa\Fitts_law_emg_data\" + filename +"\\"+ CSVname, FileMode.Create, FileAccess.Write);//创建写入文件 
+		FileStream fs = new FileStream(@"D:\Luoqi\Code\local_ssproject\Fitts_law_emg_data\" + filename +"\\"+ CSVname, FileMode.Create, FileAccess.Write);//创建写入文件 
  
         StreamWriter writer = new StreamWriter(fs);
       //  StreamWriter writer = new StreamWriter(CSVname, false);//。如果此值为false，则创建一个新文件，如果存在原文件，则覆盖。如果此值为true，则打开文件保留原来数据，如果找不到文件，则创建新文件。
-		writer.WriteLine(string.Format("{0},{1},{2},{3},{4},{5},{6}", "Time", "ID", "init_data", "averagefilter", "butterworthfilter", "bayesfilter", "emg_send"));
+		writer.WriteLine(string.Format("{0},{1},{2},{3},{4},{5},{6}", "Time", "ID", "rawEmg", "averagefilter", "butterworthfilter", "bayesfilter", "emg_send"));
 
         using (var e1 = listToHoldTime.GetEnumerator())
 		using (var e2 = listToHoldID.GetEnumerator())
-        using (var e3 = listToHoldinit_data.GetEnumerator())
+		using (var e3 = listToHoldrawEmg.GetEnumerator())
         using (var e4 = listToHoldaveragefilter.GetEnumerator())
 		using (var e5 = listToHoldbutterworthfilter.GetEnumerator())
         using (var e6 = listToHoldbayesfilter.GetEnumerator())

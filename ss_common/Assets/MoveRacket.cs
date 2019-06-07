@@ -9,7 +9,8 @@ using System.Net.Sockets;
 using System.Diagnostics;
 using UnityEngine.UI;
 //using System.math;
-
+using System.Threading;
+using DisruptorUnity3d;
 using System.IO;
 using System.IO.Ports;
 using System.Threading.Tasks;
@@ -21,39 +22,28 @@ public class MoveRacket : MonoBehaviour
     public float input1 = 1;
     public float input2 = -1;     //给input1、input2设定初始值
     //int count = 0;
-	public static bool cont_a = true;
-	private float IDrecord_f;
+	public float IDrecord_f;
 	public int levelcount_f;
-//	AllList[] Levels;
-//	AllList_f[] Levels;
-
-	private float IDrecord;
-	private float collisionrecord1;  //  bool
-	private float collisionrecord2;  //  bool
-	public int levelcount;
-	public List<float> FromZeroIDtime;
-	public int IDframe;
+	AllList_f[] Levels;
 
 
+//	UdpClient acq_pressureClient = new UdpClient();         // pressure acquisition system
+//	//IPEndPoint object will allow us to read datagrams sent from any source.
+//	IPEndPoint RemoteIpEndPoint1 = new IPEndPoint(IPAddress.Any, 0);
+
+    UdpClient neuromorphicClient = new UdpClient();     //neuromorphic system
+    IPEndPoint RemoteIpEndPoint2 = new IPEndPoint(IPAddress.Any, 0);
+
+    EndPoint Remote1;
+    EndPoint Remote2;
 
 
-	UdpClient acq_pressureClient = new UdpClient();         // pressure acquisition system
-	//IPEndPoint object will allow us to read datagrams sent from any source.
-	IPEndPoint RemoteIpEndPoint1 = new IPEndPoint(IPAddress.Any, 0);
+	private Thread _queueThread;
 
-	UdpClient neuromorphicClient = new UdpClient();     //neuromorphic system
-	IPEndPoint RemoteIpEndPoint2 = new IPEndPoint(IPAddress.Any, 0);
-
-	EndPoint Remote1;
-	EndPoint Remote2;
-
-
-	public GameObject obj1;
-	public Renderer rend1;
-	public GameObject obj2;
-	public Renderer rend2;
-	public GameObject obj3;
-	public Renderer rend3;
+	public GameObject obj;
+	public Renderer rend;
+	public GameObject obj_2;
+	public static bool cont_a = true;
 
 
 
@@ -70,53 +60,32 @@ public class MoveRacket : MonoBehaviour
 	//	byte[] receivedData = new byte[receivedDataLength];//声明一个临时数组存储当前来的串口数据   /创建接收字节数组
 
 
-
 	public static float muscle_force = 0.0f;    //motorCommand
-	public static float barForceInMilliNewton = 0.0f;
-	int n = 0;
-	float k = 0.05f;
-	float b = 0.9f;
-	double Lce = 0.0f;
+//	public static float barForceInMilliNewton = 0.0f;
+    int n = 0;
+//	public static float Lce = 0.0f;
+    //float Lce1 = 0.0f;
+	public float Lce = 0.0f;
 	int positioncur = 0;
 	int neuromorphic_off_send = 0;
 	int neuromorphic_on_send = 0;
 
-
-
-
-//    //Socket server1 = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);  //实现 Berkeley 套接字接口
-//    //public IPEndPoint sender1 = new IPEndPoint(IPAddress.Any, 0);  //定义服务端
-//
-//    UdpClient nanoTecClient = new UdpClient();         // nanotec motor
-//    //IPEndPoint object will allow us to read datagrams sent from any source.
-//    IPEndPoint RemoteIpEndPoint1 = new IPEndPoint(IPAddress.Any, 0);
-//
-//    UdpClient neuromorphicClient = new UdpClient();     //neuromorphic system
-//    IPEndPoint RemoteIpEndPoint2 = new IPEndPoint(IPAddress.Any, 0);
-//
-//    EndPoint Remote1;
-//    EndPoint Remote2;
-//
-//    //float emg_neuromorphic = 0.0f;
-//	public static float muscle_force = 0.0f;
-//    int n = 0;
-//	public static float Lce = 0.0f;
-//    //float Lce1 = 0.0f;
-
-
-    //int recv1;
-    float init_data = 0.0f;
+//    float rawEmg = 0.0f;
 	float averagefilter = 0.0f;
 	float butterworthfilter = 0.0f;  
-	float bayesfilter = 0.0f;
+//	float bayesfilter = 0.0f;
 	float emg_send = 0.0f;  
 
+	public float rawEmg;
+	public float bayesfilter;
+	private bool running = false;
 
-//    static readonly object lockObject = new object();
-//    bool precessData = false;
+	//ring buffer
+	static readonly RingBuffer<float> Queue = new RingBuffer<float>(10);
+
 
     EmgModule myEmg = new EmgModule();
-    BayesFilter myBayesian = new BayesFilter();
+	BayesFilter myBayesFilter = new BayesFilter();
     Simulator mySimulator = new Simulator();
 
 
@@ -141,28 +110,16 @@ public class MoveRacket : MonoBehaviour
 
     float[] aa = new float[10];      //均值滤波阶数（oder）-10阶
 
-    //float[] save = new float[100];
 
 
-//
-//	void CreateList(int n)
-//	{
-//		for (int i = 0; i < n; i++)
-//		{
-//			Levels[i] = new AllList();
-//		}
-//	}
-//
-//
-//
-//	void CreateList(int n)
-//	{
-//		for (int i = 0; i < n; i++)
-//		{
-//			Levels[i] = new AllList_f();
-//		}
-//	}
-//
+	void CreateList(int n)
+	{
+		for (int i = 0; i < n; i++)
+		{
+			Levels[i] = new AllList_f();
+		}
+	}
+
 
 
     void Start()
@@ -171,7 +128,7 @@ public class MoveRacket : MonoBehaviour
         Console.WriteLine("This is a Client, host name is {0}", Dns.GetHostName());//获取本地计算机的主机名
         try
         {
-			acq_pressureClient.Connect("127.0.0.1", 8001);   //注意端口保持一致
+//			acq_pressureClient.Connect("127.0.0.1", 8001);   //注意端口保持一致
 			neuromorphicClient.Connect("192.168.0.100", 5000);   //注意IP和port
         }
 
@@ -181,27 +138,27 @@ public class MoveRacket : MonoBehaviour
         }
 
 
-
+		running = true;
+		_queueThread = new Thread(queueWorker);
+		_queueThread.IsBackground = true;
+		_queueThread.Start();
 
         myEmg.startEmg();
 
-		obj1 = GameObject.Find("MoveRacket");
-		obj2 = GameObject.Find("MoveRacket");
-		obj3 = GameObject.Find ("Interface");
+
+		obj = GameObject.Find("MoveRacket");
+		obj_2 = GameObject.Find ("Interface");
 		//.GetComponent<Renderer>().enabled = false;
-		obj3.GetComponent<Renderer>().enabled = false;
-		obj3.transform.position = new Vector2(280, 260);
+		obj_2.GetComponent<Renderer>().enabled = false;
+		obj_2.transform.position = new Vector2(280, 260);
 
 		GameObject inputvariate1 = GameObject.Find("Canvas/inputvariate1");
 		GameObject inputvariate2 = GameObject.Find("Canvas/inputvariate2");
 
 
-//		levelcount_f = TargetRacket_force.levelnumber;  
-//		Levels = new AllList_f[levelcount_f];
-//		CreateList(levelcount_f);
-
-
-
+		levelcount_f = TargetRacket_force.levelnumber;  
+		Levels = new AllList_f[levelcount_f];
+		CreateList(levelcount_f);
 
 
 
@@ -212,31 +169,32 @@ public class MoveRacket : MonoBehaviour
 		//		sp2.Open();
 
 
+
 	
     }
 
 
 
-    private float EmgAverage(int jieshu, float emg)   //   均值滤波   jieshu(阶数-oder)
+    private float EmgAverage(int order, float emg)   //   均值滤波   order(阶数-order)
     {
 
         float sum = 0;
         float filterEmg = 0;
-        for (int i = jieshu - 1; i > 0; i--)
+        for (int i = order - 1; i > 0; i--)
         {
             aa[i] = aa[i - 1];
             sum += aa[i];
         }
         aa[0] = emg;
-        //if (a[jieshu - 1] == 0) myEmg.emgData[0] = 0;
-        filterEmg = (sum + aa[0]) / jieshu;
+        //if (a[order - 1] == 0) myEmg.emgData[0] = 0;
+        filterEmg = (sum + aa[0]) / order;
         return filterEmg;
 
     }
 
 
 
-    private float EmgFilter(float emg) //  巴特沃斯滤波-3阶
+	private float ButterworthFilter(float emg) //  巴特沃斯滤波-3阶
     {
         for (int i = 3; i > 0; i--)
         {
@@ -288,14 +246,11 @@ public class MoveRacket : MonoBehaviour
 
     void FixedUpdate()         // 设为0.01s
     {
+		
+		float rawEmg = 0.0f;
 
-		IDrecord = TargetRacket_force.ID;
-		collisionrecord1 = TargetRacket_force.collision1;
-		collisionrecord2 = Prohibited_area.collision2;
-		IDframe = TargetRacket_force.time_flag;
-
-
-
+		IDrecord_f = TargetRacket_force.ID;
+		Lce = MoveRacket_force.Lce_mo;
 
         if (TestClick.flag)
         {
@@ -309,33 +264,20 @@ public class MoveRacket : MonoBehaviour
             //print (input1);
             //print (input2);
 
+			//print ("rawEmg");
+			rawEmg = ChooseMode("real");
 
-            //print ("emg");
-            init_data = ChooseMode("real");
+			while (Queue.TryDequeue(out rawEmg))
+			{
+				bayesfilter = myBayesFilter.UpdateEst(Math.Abs(rawEmg) * 6e2f);
+				//			Debug.Log(bayesfilter.ToString());
+			}
 
-            if (init_data == 0)
-                bayesfilter = 0;
-           else
-           //bayesfilter = (float)(myBayesian.UpdateEst(init_data / 100));                 //贝叶斯滤波
-            {
-               bayesfilter = (float)(myBayesian.UpdateEst(init_data * 80000 / 50));//200    0-1
-                                                                                    //bayesfilter = Mathf.Max(0,(float)(myBayesian.UpdateEst(init_data * 80000 / input1)) + input2);// 200    0-1
-                //emg_send = Mathf.Max(0, bayesfilter * input1 + input2);
-				////emg_send = Mathf.Max(0, bayesfilter * bayesfilter * input1 + input2);   //bayesfilter1 = Math.Pow(bayesfilter,2); 2次方   
-				////emg_send = Mathf.Max(0, Mathf.Exp(bayesfilter) * input1 + input2);
-				////emg_send = Mathf.Max(0, Mathf.Exp(bayesfilter * input1) + input2);
-              // init_data = init_data * 80000;
-             }
+			  
 
-
-			averagefilter = EmgAverage(10, Math.Abs(init_data * 80000 / 40));       //均值滤波
-
-			//butterworth_filter = EmgFilter(myEmg.emgData[0]);
-			butterworthfilter = EmgFilter(init_data* 80000/4);                     //巴特沃斯滤波
-
-
+			averagefilter = EmgAverage(10, Math.Abs(rawEmg * 80000 / 40));       //均值滤波
+			butterworthfilter = ButterworthFilter(rawEmg* 80000/4);                     //巴特沃斯滤波
 			emg_send = Mathf.Max(0, bayesfilter * input1 + input2);   //butterworthfilter    bayesfilter
-
 
 
 
@@ -346,49 +288,18 @@ public class MoveRacket : MonoBehaviour
                 //n++;
                 //Lce = Math.Abs(Lce) + 1;
                 //float Lce1 = (float)Lce;   
-//
-//                // Sends a message to the host to which you have connected.
-//				Byte[] sendBytes = Encoding.ASCII.GetBytes(neuromorphic_off_send.ToString());       //neuromorphic_off_send
-//				Byte[] sendBytes1 = Encoding.ASCII.GetBytes(neuromorphic_on_send.ToString());
-//                Byte[] sendBytes2 = Encoding.ASCII.GetBytes(Lce.ToString());
-//
-//
-//                neuromorphicClient.Send(sendBytes2, sendBytes2.Length);  //send spring length changes to neuromorphic system
-//
-//
-//           
-//
-//                // Blocks until a message returns on this socket from a remote host.
-//                Byte[] receiveBytes1 = nanoTecClient.Receive(ref RemoteIpEndPoint1);
-//                Byte[] receiveBytes2 = neuromorphicClient.Receive(ref RemoteIpEndPoint2);
-//
-//                string recMsg1 = Encoding.ASCII.GetString(receiveBytes1);  //receive message from motor
-//                Lce = float.Parse(recMsg1);
-//
-//				open_loop_control_send = emg_send + 0;
-//				neuromorphic_off_send = emg_send + Lce/20;
-//
-//                string recMsg2 = Encoding.ASCII.GetString(receiveBytes2);   //receive message from neuromorphic system
-//                muscle_force = float.Parse(recMsg2);
-//
-//				neuromorphic_on_send = emg_send + muscle_force/10;        //muscle_force*input1/10
-//
-//                //print(count++);
-
-
-
 
 
 				// Sends a message to the host to which you have connected.
-				Byte[] sendBytes1 = Encoding.ASCII.GetBytes("H");
-				acq_pressureClient.Send(sendBytes1, sendBytes1.Length);
+//				Byte[] sendBytes1 = Encoding.ASCII.GetBytes("H");
+//				acq_pressureClient.Send(sendBytes1, sendBytes1.Length);
 				// Blocks until a message returns on this socket from a remote host.
-				Byte[] receiveBytes1 = acq_pressureClient.Receive(ref RemoteIpEndPoint1);	
-				string recMsg1 = Encoding.ASCII.GetString(receiveBytes1);  //receive message from DAQ
-				barForceInMilliNewton = float.Parse(recMsg1);
+//				Byte[] receiveBytes1 = acq_pressureClient.Receive(ref RemoteIpEndPoint1);	
+//				string recMsg1 = Encoding.ASCII.GetString(receiveBytes1);  //receive message from DAQ
+//				barForceInMilliNewton = float.Parse(recMsg1);
 
-				//			Lce = k * barForceInMilliNewton + b;  //1~2   ，
-				Lce = 1 + barForceInMilliNewton/20000;     
+//				//			Lce = k * barForceInMilliNewton + b;  //1~2   ，
+//				Lce = 1 + barForceInMilliNewton/20000;     
 
 				Byte[] sendBytes2 = Encoding.ASCII.GetBytes(Lce.ToString());
 				neuromorphicClient.Send(sendBytes2, sendBytes2.Length);  //send spring length change to neuromorphic system
@@ -397,30 +308,21 @@ public class MoveRacket : MonoBehaviour
 				string recMsg2 = Encoding.ASCII.GetString(receiveBytes2);   //receive message from neuromorphic system
 				muscle_force = float.Parse(recMsg2);    //motorCommand-muscle_force     muscle_force——0~18
 
-				neuromorphic_on_send = (int)(emg_send*50  + muscle_force*80);   
-				neuromorphic_off_send = (int)(50*emg_send + Lce/20);
-
-
-
-
+				neuromorphic_on_send = (int)((2000 - emg_send*50)  - muscle_force*80);   
+				neuromorphic_off_send = (int)((2000 - emg_send*50) - Lce/100);
 
 
 
 				if (NeuromorphicClick.enter_neuromorphic)
 				{
 
-					positioncur = neuromorphic_on_send;
-
+					positioncur = neuromorphic_on_send;         //send EMG + muscle force to linear motor
 				}
 
 				else
 				{
-					positioncur = neuromorphic_off_send;
+					positioncur = neuromorphic_off_send;      //send (EMG + 0) or (EMG + feedback_number) to linear motor
 				}
-
-
-
-
 
 				if (positioncur >= 2000)
 
@@ -429,95 +331,88 @@ public class MoveRacket : MonoBehaviour
 
             }
 
+
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
             }
 
 
-			float barHeight = 0.008f * barForceInMilliNewton;
+//			float barHeight = 0.008f * barForceInMilliNewton;
 //			GetComponent<Rigidbody2D>().position = new Vector2(0, barHeight);
 
             GetComponent<Rigidbody2D>().position = new Vector2(30, emg_send);
+
+            //Vector2 mousePosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+            //GetComponent<Rigidbody2D>().position = new Vector2(0, mousePosition.y);
+
+
+
+
+			//Send something to Motor
+
+			double positionangle1 = Math.Sin(n * Math.PI / 180) * 2000;      //Write position 
+			n++;     //n = n + 1; 
+			int position1 = (int)positionangle1;
+			//position = Math.Abs(position);
+
+			double positionangle2 = Math.Cos(n * Math.PI / 180) * 2000;      
+			n++;     
+			int position2 = (int)positionangle2;
+
+
+			byte ID = 0x01;
+			byte Instuction = 0x02;
+			byte MemAddr = 0x37;
+			//int position = 1300;
+			byte positioncur_L = (byte)(positioncur & 0xFF);
+			byte positioncur_H = (byte)(positioncur >> 8);
+			byte position2_L = (byte)(position2 & 0xFF);
+			byte position2_H = (byte)(position2 >> 8);
+			byte nLen = 0x02;
+
+			byte msgLen = (byte)(nLen + 0x02);
+			byte CheckSum1 = (byte)(msgLen + ID + Instuction + MemAddr + positioncur_L + positioncur_H);
+			byte CheckSum2 = (byte)(msgLen + ID + Instuction + MemAddr + position2_L + position2_H);
+
+			byteBuffer1[0] = 0x55;           //帧头
+			byteBuffer1[1] = 0xAA;
+			byteBuffer1[2] = msgLen;     //帧长度
+			byteBuffer1[3] = ID;
+			byteBuffer1[4] = Instuction;
+			byteBuffer1[5] = MemAddr;
+			byteBuffer1[6] = positioncur_L;
+			byteBuffer1[7] = positioncur_H;
+			byteBuffer1[8] = CheckSum1;
+
+
+			byteBuffer2[0] = 0x55;           
+			byteBuffer2[1] = 0xAA;
+			byteBuffer2[2] = msgLen;     
+			byteBuffer2[3] = ID;
+			byteBuffer2[4] = Instuction;
+			byteBuffer2[5] = MemAddr;
+			byteBuffer2[6] = position2_L;
+			byteBuffer2[7] = position2_H;
+			byteBuffer2[8] = CheckSum2;
+
+			sp1.Write(byteBuffer1, 0, byteBuffer1.Length);
+			System.Threading.Thread.Sleep(5);
+
+			//		sp2.Write(byteBuffer2, 0, byteBuffer2.Length);
+			//		System.Threading.Thread.Sleep(8);
+
 
         }
 
 
 
 
-		//Send something to Motor
+		if(TargetRacket_force.destroy_mark == false)
+		{
+			Levels[(int)IDrecord_f].allList(Time.time, IDrecord_f, rawEmg, averagefilter, butterworthfilter, bayesfilter, emg_send); 
 
-		double positionangle1 = Math.Sin(n * Math.PI / 180) * 2000;      //Write position 
-		n++;     //n = n + 1; 
-		int position1 = (int)positionangle1;
-		//position = Math.Abs(position);
-
-		double positionangle2 = Math.Cos(n * Math.PI / 180) * 2000;      
-		n++;     
-		int position2 = (int)positionangle2;
-
-
-		byte ID = 0x01;
-		byte Instuction = 0x02;
-		byte MemAddr = 0x37;
-		//int position = 1300;
-		byte positioncur_L = (byte)(positioncur & 0xFF);
-		byte positioncur_H = (byte)(positioncur >> 8);
-		byte position2_L = (byte)(position2 & 0xFF);
-		byte position2_H = (byte)(position2 >> 8);
-		byte nLen = 0x02;
-
-		byte msgLen = (byte)(nLen + 0x02);
-		byte CheckSum1 = (byte)(msgLen + ID + Instuction + MemAddr + positioncur_L + positioncur_H);
-		byte CheckSum2 = (byte)(msgLen + ID + Instuction + MemAddr + position2_L + position2_H);
-
-		byteBuffer1[0] = 0x55;           //帧头
-		byteBuffer1[1] = 0xAA;
-		byteBuffer1[2] = msgLen;     //帧长度
-		byteBuffer1[3] = ID;
-		byteBuffer1[4] = Instuction;
-		byteBuffer1[5] = MemAddr;
-		byteBuffer1[6] = positioncur_L;
-		byteBuffer1[7] = positioncur_H;
-		byteBuffer1[8] = CheckSum1;
-
-
-		byteBuffer2[0] = 0x55;           
-		byteBuffer2[1] = 0xAA;
-		byteBuffer2[2] = msgLen;     
-		byteBuffer2[3] = ID;
-		byteBuffer2[4] = Instuction;
-		byteBuffer2[5] = MemAddr;
-		byteBuffer2[6] = position2_L;
-		byteBuffer2[7] = position2_H;
-		byteBuffer2[8] = CheckSum2;
-
-		sp1.Write(byteBuffer1, 0, byteBuffer1.Length);
-		System.Threading.Thread.Sleep(5);
-
-		//		sp2.Write(byteBuffer2, 0, byteBuffer2.Length);
-		//		System.Threading.Thread.Sleep(8);
-
-
-	
-
-
-
-
-
-//		if(TargetRacket_force.destroy_mark == false)
-//		{
-//			Levels[(int)IDrecord].allList(Time.time, barForceInMilliNewton, IDrecord, barHeight, collisionrecord1, collisionrecord2, Lce, muscle_force, IDframe); 
-//
-//		}
-
-
-
-//		if(TargetRacket_force.destroy_mark == false)
-//		{
-//			Levels[(int)IDrecord_f].allList(Time.time, IDrecord_f, init_data, averagefilter, butterworthfilter, bayesfilter, emg_send); 
-//
-//		}
+		}
 
 
 
@@ -525,7 +420,7 @@ public class MoveRacket : MonoBehaviour
 
 			cont_a = !cont_a;
 
-			obj3.GetComponent<Renderer>().enabled = cont_a;
+			obj_2.GetComponent<Renderer>().enabled = cont_a;
 			inputvariate1.gameObject.SetActive(!cont_a);
 			inputvariate2.gameObject.SetActive(!cont_a);
 		}
@@ -534,14 +429,37 @@ public class MoveRacket : MonoBehaviour
 
 
 
+	private void queueWorker()
+	{
+		while (running)
+		{
+			//			Debug.Log ("Here");
+
+			float newEmg = myEmg.getOneSample();
+
+			//			Debug.Log ("Here2");
+
+
+			Queue.Enqueue(newEmg);
+		}
+
+	}
+
+
+
     private void OnApplicationQuit()
     {
+
+		running = false;
+
+		//_queueThread.Join ();
+		myEmg.stopEmg();
         myEmg.stopEmg();
 
-
+        // *** Shut down nanoTecServer
         try
         {
-			acq_pressureClient.Close();
+//			acq_pressureClient.Close();
             neuromorphicClient.Close();
         }
         catch (Exception e)
@@ -549,32 +467,16 @@ public class MoveRacket : MonoBehaviour
             Console.WriteLine(e.ToString());
         }
 
+ 
 
+		SaveCSV_f.createfile();
 
+		for (int n = 0; n < levelcount_f; n++)
+		{
+			SaveCSV_f.savedata("emg_data" + n.ToString() + ".csv", Levels[n].listToHoldTime, Levels[n].listToHoldID, Levels[n].listToHoldrawEmg, Levels[n].listToHoldaveragefilter, Levels[n].listToHoldbutterworthfilter, Levels[n].listToHoldbayesfilter, Levels[n].listToHoldemg_send);  
+		}
 
-
-//		for (int n = 0; n < levelcount; n++)
-//		{
-//			SaveCSV.savedata("Force_bar" + n.ToString() + ".csv", Levels[n].listToHoldTime, Levels[n].listToHoldData, Levels[n].listToHoldID, Levels[n].listToHoldBarHeight,Levels[n].listToHoldcollision1, Levels[n].listToHoldcollision2, Levels[n].listToHoldLce, Levels[n].listToHoldmuscle_force, Levels[n].listToHoldtimeflag);  
-//
-//		}
-
-
-
-
-
-
-//		SaveCSV_f.createfile();
-//
-//		for (int n = 0; n < levelcount_f; n++)
-//		{
-//			SaveCSV_f.savedata("emg_data" + n.ToString() + ".csv", Levels[n].listToHoldTime, Levels[n].listToHoldID, Levels[n].listToHoldinit_data, Levels[n].listToHoldaveragefilter, Levels[n].listToHoldbutterworthfilter, Levels[n].listToHoldbayesfilter, Levels[n].listToHoldemg_send);  
-//
-//		}
-
-
+                
     }
 
 }
-
-

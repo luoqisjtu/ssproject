@@ -9,7 +9,7 @@
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <RootNamespace></RootNamespace>
-    <ProjectGuid>{0580127E-E8BE-0EC7-FEA2-607D515DAB95}</ProjectGuid>
+    <ProjectGuid>{EEB588B0-BA98-15BC-36B3-DC647FE4496B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <AssemblyName>Assembly-CSharp</AssemblyName>
@@ -54,22 +54,29 @@
      <Compile Include="Assets\AllList.cs" />
      <Compile Include="Assets\AllList_f.cs" />
      <Compile Include="Assets\BayesianFilter.cs" />
+     <Compile Include="Assets\ConcurrentQueue.cs" />
      <Compile Include="Assets\Delay.cs" />
      <Compile Include="Assets\EmgModule.cs" />
      <Compile Include="Assets\EnterClick.cs" />
      <Compile Include="Assets\GlobalVariables.cs" />
      <Compile Include="Assets\MoveRacket.cs" />
+     <Compile Include="Assets\MoveRacket_force.cs" />
      <Compile Include="Assets\NeuromorphicClick.cs" />
      <Compile Include="Assets\Prohibited_area.cs" />
+     <Compile Include="Assets\RingBuffer.cs" />
      <Compile Include="Assets\SaveCSV.cs" />
      <Compile Include="Assets\SaveCSV_f.cs" />
      <Compile Include="Assets\Simulator.cs" />
+     <Compile Include="Assets\TargetRacket.cs" />
      <Compile Include="Assets\TargetRacket_force.cs" />
      <Compile Include="Assets\TestClick.cs" />
      <Compile Include="Assets\UdpModule.cs" />
      <None Include="Assets\Resources\config-2time.txt" />
      <None Include="Assets\Resources\config_single-finger.txt" />
      <None Include="Assets\Resources\config.txt" />
+     <None Include="Assets\Resources\WT_LY_yes_no.txt" />
+     <None Include="Assets\Resources\config22.txt" />
+     <None Include="Assets\Resources\config11.txt" />
      <None Include="Assets\Resources\config-5-8-N.txt" />
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
